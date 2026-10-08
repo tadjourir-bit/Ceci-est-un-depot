@@ -1,0 +1,57 @@
+name: Classification de messages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verifier_et_preparer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer les fichiers du depot
+        uses: actions/checkout@v6
+
+      - name: Installer Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Installer les bibliotheques
+        run: python -m pip install scikit-learn joblib
+
+      - name: Tester la classification
+        run: python -m unittest test_modele.py
+
+      - name: Entrainer et produire les fichiers
+        run: python modele.py
+
+      - name: Conserver le modele telechargeable
+        uses: actions/upload-artifact@v4
+        with:
+          name: modele-spam
+          path: modele.joblib
+
+      - name: Preparer GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Preparer la page a publier
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  publier:
+    needs: verifier_et_preparer
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - name: Publier la page
+        id: deploiement
+        uses: actions/deploy-pages@v4
